@@ -21,6 +21,15 @@ struct MangaListView: View {
         NavigationStack {
             content
                 .navigationTitle("Mangas Populares")
+                // Botón de búsqueda (lupa) arriba a la derecha
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink(destination: SearchView()) {
+                            Image(systemName: "magnifyingglass")
+                        }
+                        .accessibilityLabel("Buscar mangas")
+                    }
+                }
                 // Solo carga si no hay datos aún (evita recargar al volver del detalle)
                 .task {
                     if case .idle = viewModel.state {

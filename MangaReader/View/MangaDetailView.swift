@@ -38,19 +38,17 @@ struct MangaDetailView: View {
                 Text(manga.description)
                     .font(.body)
 
-                // Enlace para leer en MangaDex
-                if let url = URL(string: "https://mangadex.org/title/\(manga.id)") {
-                    Link(destination: url) {
-                        Text("Leer en MangaDex")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                    .padding(.top, 8)
+                // Botón para abrir el lector dentro de la app
+                NavigationLink(destination: ReaderView(manga: manga)) {
+                    Label("Leer manga", systemImage: "book.fill")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .padding(.top, 8)
             }
             .padding()
         }
