@@ -35,45 +35,14 @@ final class MangaService {
         return dto.data.map { Manga(from: $0) }
     }
 
-    /// GET: capítulos legibles (en español o inglés) de un manga.
-    /// Endpoint: https://api.mangadex.org/chapter?manga=...
-    func fetchChapters(mangaID: String) async throws -> [Chapter] {
-        let dto: ChapterListResponseDTO = try await get("/chapter", queryItems: [
-            URLQueryItem(name: "manga", value: mangaID),
-            URLQueryItem(name: "translatedLanguage[]", value: "es"),
-            URLQueryItem(name: "translatedLanguage[]", value: "en"),
-            URLQueryItem(name: "order[chapter]", value: "asc"),
-            URLQueryItem(name: "limit", value: "100")
-        ])
-
-        // Solo capítulos con páginas reales en MangaDex (los externos van a MangaPlus, etc.)
-        let legibles = dto.data
-            .filter { ($0.attributes.pages ?? 0) > 1 && $0.attributes.externalUrl == nil }
-            .map { Chapter(from: $0) }
-            .sorted { (Double($0.number) ?? .infinity) < (Double($1.number) ?? .infinity) }
-
-        // Quitar duplicados: mismo número e idioma subido por distintos grupos
-        var vistos = Set<String>()
-        return legibles.filter { vistos.insert("\($0.number)-\($0.language)").inserted }
-    }
-
-    /// GET: URLs de las páginas de un capítulo.
-    /// Endpoint: https://api.mangadex.org/at-home/server/{chapterId}
-    func fetchChapterPages(chapterID: String) async throws -> [URL] {
-        let dto: AtHomeResponseDTO = try await get("/at-home/server/\(chapterID)")
-        return dto.chapter.data.compactMap { fileName in
-            URL(string: "\(dto.baseUrl)/data/\(dto.chapter.hash)/\(fileName)")
-        }
-    }
-
     /// Clean Code: DRY — una sola función hace la petición, valida y decodifica;
-    /// los métodos de arriba solo definen la ruta y los parámetros.
-    private func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem] = []) async throws -> T {
+    /// los métodos de arriba solo definen los parámetros.
+    private func get<T: Decodable>(_ path: String, queryItems: [URLQueryItem]) async throws -> T {
         // 1. Construir la URL de forma segura con URLComponents
         guard var components = URLComponents(string: baseURL + path) else {
             throw NetworkError.invalidURL
         }
-        components.queryItems = queryItems.isEmpty ? nil : queryItems
+        components.queryItems = queryItems
         guard let url = components.url else { throw NetworkError.invalidURL }
 
         // 2. Ejecutar la petición con async/await
