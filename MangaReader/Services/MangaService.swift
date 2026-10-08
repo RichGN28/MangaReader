@@ -7,70 +7,45 @@
 
 import Foundation
 
-// en esto me ayudo gemini
-protocol MangaServiceProtocol {
-    func fetchMangas(ids: [String]?) async throws -> [Manga]
-}
-
-final class MangaService: MangaServiceProtocol {
-    private let session: URLSession
+/// Clean Code: Single Responsibility — esta clase SOLO habla con la API de MangaDex.
+final class MangaService {
     private let baseURL = "https://api.mangadex.org"
-    
-    init(session: URLSession = .shared) {
-        self.session = session
-    }
-    
-    func fetchMangas(ids: [String]? = nil) async throws -> [Manga] {
-        // 1. Construir URL usando URLComponents de forma segura
+
+    /// GET: mangas más seguidos (orden descendente), incluyendo su portada.
+    /// Endpoint usado: https://api.mangadex.org/manga
+    func fetchPopularMangas() async throws -> [Manga] {
+        // 1. Construir la URL de forma segura con URLComponents
         guard var components = URLComponents(string: "\(baseURL)/manga") else {
             throw NetworkError.invalidURL
         }
-        
-        // Incluir la relación de cover_art para recibir el fileName en relationships
-        var queryItems: [URLQueryItem] = [
-            URLQueryItem(name: "includes[]", value: "cover_art"),
-            URLQueryItem(name: "limit", value: "20")
+        components.queryItems = [
+            URLQueryItem(name: "limit", value: "20"),
+            URLQueryItem(name: "includes[]", value: "cover_art"),       // pide el nombre del archivo de portada
+            URLQueryItem(name: "order[followedCount]", value: "desc"),  // más populares primero
+            URLQueryItem(name: "contentRating[]", value: "safe")        // solo contenido apto
         ]
-        
-        // Si especificamos una lista fija de IDs favoritos, los agregamos como filtros
-        if let ids = ids, !ids.isEmpty {
-            for id in ids {
-                queryItems.append(URLQueryItem(name: "ids[]", value: id))
-            }
-        }
-        
-        components.queryItems = queryItems
-        
-        guard let url = components.url else {
-            throw NetworkError.invalidURL
-        }
-        
-        // 2. Ejecutar la llamada de red con async/await
-        let data: Data
-        let response: URLResponse
-        
+        guard let url = components.url else { throw NetworkError.invalidURL }
+
+        // 2. Ejecutar la petición con async/await
+        let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await session.data(from: url)
+            (data, response) = try await URLSession.shared.data(from: url)
+        } catch let error as URLError where error.code == .notConnectedToInternet {
+            throw NetworkError.noConnection   // caso amigable cuando no hay internet
         } catch {
             throw NetworkError.serverError(error)
         }
-        
-        // 3. Validar código HTTP de respuesta
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse(statusCode: -1)
+
+        // 3. Validar el código HTTP de la respuesta
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+        guard (200...299).contains(statusCode) else {
+            throw NetworkError.invalidResponse(statusCode: statusCode)
         }
-        
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.invalidResponse(statusCode: httpResponse.statusCode)
-        }
-        
-        // 4. Decodificar el JSON al DTO y mapear a entidades de dominio
+
+        // 4. Decodificar el JSON (DTO) y mapearlo al modelo de la app
         do {
-            let decoder = JSONDecoder()
-            let responseDTO = try decoder.decode(MangaListResponseDTO.self, from: data)
-            
-            // Transformar MangaDataDTO -> Manga
-            return responseDTO.data.map { Manga(from: $0) }
+            let dto = try JSONDecoder().decode(MangaListResponseDTO.self, from: data)
+            return dto.data.map { Manga(from: $0) }
         } catch {
             throw NetworkError.decodingError(error)
         }

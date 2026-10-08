@@ -3,9 +3,11 @@
 //  MangaReader
 //
 //  Created by Ricardo Gómez on 06/10/26.
+//
 
 import Foundation
 
+/// Modelo de la app: solo los campos que la UI necesita.
 struct Manga: Identifiable, Hashable {
     let id: String
     let title: String
@@ -15,26 +17,30 @@ struct Manga: Identifiable, Hashable {
 }
 
 extension Manga {
+    /// Convierte el DTO de la API al modelo de la app.
     init(from dto: MangaDataDTO) {
         self.id = dto.id
-        
-        // titulo en ingles
-        self.title = dto.attributes.title["en"] ?? dto.attributes.title.values.first ?? "Sin titulo"
-        
-        self.description = dto.attributes.description?["en"] ?? dto.attributes.description?.values.first ?? "Descripción no disponible"
-        
+
+        // Título en inglés; si no existe, el primero disponible
+        self.title = dto.attributes.title["en"]
+            ?? dto.attributes.title.values.first
+            ?? "Sin título"
+
+        self.description = dto.attributes.description?["en"]
+            ?? dto.attributes.description?.values.first
+            ?? "Descripción no disponible"
+
         self.status = dto.attributes.status ?? "Desconocido"
-        
-        // Buscar el archivo del cover art
-        let coverFileName = dto.relationships.first(where: { $0.type == "cover_art" })?
-            .attributes?
-            .fileName
-     
-        if let fileName = coverFileName {
-                    self.coverURL = URL(string: "https://uploads.mangadex.org/covers/\(dto.id)/\(fileName).256.jpg")
-                } else {
-                    self.coverURL = nil
-                }
-        
+
+        // La portada llega como relación "cover_art"; se arma la URL con el fileName
+        let fileName = dto.relationships
+            .first(where: { $0.type == "cover_art" })?
+            .attributes?.fileName
+
+        if let fileName {
+            self.coverURL = URL(string: "https://uploads.mangadex.org/covers/\(dto.id)/\(fileName).256.jpg")
+        } else {
+            self.coverURL = nil
+        }
     }
 }
