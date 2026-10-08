@@ -17,6 +17,15 @@ struct Manga: Identifiable, Hashable {
 }
 
 extension Manga {
+    /// Dato de ejemplo para los #Preview de Xcode (no se usa en producción).
+    static let sample = Manga(
+        id: "sample",
+        title: "Sousou no Frieren",
+        description: "La elfa Frieren emprende un nuevo viaje tras la muerte del héroe Himmel.",
+        coverURL: nil,
+        status: "ongoing"
+    )
+
     /// Convierte el DTO de la API al modelo de la app.
     init(from dto: MangaDataDTO) {
         self.id = dto.id

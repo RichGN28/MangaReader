@@ -9,13 +9,24 @@ import SwiftUI
 
 /// Vista de lista (nivel 1 de navegación). Solo dibuja según el estado del ViewModel.
 struct MangaListView: View {
-    @State private var viewModel = MangaListViewModel()
+    @State private var viewModel: MangaListViewModel
+
+    /// Permite inyectar un ViewModel (útil para previews); por defecto usa uno nuevo.
+    @MainActor
+    init(viewModel: MangaListViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? MangaListViewModel())
+    }
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Mangas Populares")
-                .task { await viewModel.loadMangas() }
+                // Solo carga si no hay datos aún (evita recargar al volver del detalle)
+                .task {
+                    if case .idle = viewModel.state {
+                        await viewModel.loadMangas()
+                    }
+                }
         }
     }
 
@@ -90,5 +101,6 @@ struct ErrorView: View {
 }
 
 #Preview {
-    MangaListView()
+    // Preview con datos de ejemplo: se ve al instante, sin esperar a la red
+    MangaListView(viewModel: .preview)
 }

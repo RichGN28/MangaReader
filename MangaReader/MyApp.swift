@@ -15,3 +15,8 @@ struct MyApp: App {
         }
     }
 }
+
+
+#Preview {
+    MangaListView()
+}

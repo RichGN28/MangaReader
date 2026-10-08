@@ -38,3 +38,12 @@ final class MangaListViewModel {
         }
     }
 }
+
+extension MangaListViewModel {
+    /// ViewModel precargado con datos de ejemplo, solo para el #Preview de Xcode.
+    static var preview: MangaListViewModel {
+        let viewModel = MangaListViewModel()
+        viewModel.state = .loaded([.sample, .sample, .sample])
+        return viewModel
+    }
+}
